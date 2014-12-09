@@ -1,0 +1,66 @@
+#! /bin/bash
+
+# 
+# Simulate the PLC processing a part with the supplied serial number
+# 
+# Run ./simulate in one terminal window (and enter serial numbers, or hit return)
+# Run ./process in another terminal window
+# 
+
+SIMADD=localhost
+SIMPID=0
+SERNUM=0
+
+log() {
+    echo $( date '+%Y-%m-%d %H:%M:%S' ): $*
+}
+
+sim_kill() {
+    if (( SIMPID )); then
+        log "Terminating simulator PID $SIMPID"
+        kill $SIMPID;
+    fi
+}
+trap sim_kill EXIT
+
+python -m cpppo.server.enip --address $SIMADD --print TriggerBool=SINT DoneBool=SINT SerialNo=DINT &
+SIMPID=$!
+log "Started EtherNet/IP simulator $SIMPID"
+
+while read -p "Enter Serial Number of next part: " serial; do
+    # Trigger the start of processing of the next serial number.  We'll do this all as one Multiple
+    # Packet Service request, but write TriggerBool last, after all other data.
+    if [ -z "$serial" ]; then 
+        (( SERNUM = SERNUM + 1 ))
+    elif [ "$serial" -eq "$serial" ]; then 
+        (( SERNUM = serial ))
+    else
+        log "Invalid serial number: $serial"
+        continue
+    fi
+
+    if ! python -m cpppo.server.enip.client --address $SIMADD --multiple \
+           "SerialNo=(DINT)$SERNUM"	\
+           "DoneBool=(SINT)0"		\
+           "TriggerBool=(SINT)1"; then
+        log "Failed to initiate processing of SerialNo=$SERNUM"
+        exit 1
+    fi
+    log "Awaiting completion of Serial Number $SERNUM..."
+
+    # Loop 'til we successfully see DoneBool != 0
+    while done=$( python -m cpppo.server.enip.client --address $SIMADD --print DoneBool ); do
+        if [ -z "${done##*\[0\]: \'OK\'}" ]; then	# success; read a zero value
+            sleep 1
+            continue
+        elif [ -z "${done##*: \'OK\'}" ]; then	# success; read a non-zero value
+            log "Detected completion of Serial Number $SERNUM: $done"
+            break
+        else					# failure of some kind
+            log "Failure awaiting completion of Serial Number $SERNUM: $done"
+            exit 1
+        fi
+    done
+done
+
+wait $SIMPID

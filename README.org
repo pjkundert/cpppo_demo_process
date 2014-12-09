@@ -1,0 +1,13 @@
+* Simple Process Demo
+
+  To test, open up two terminal windows:
+    - in terminal one, run =./simulate=, which starts a simulated PLC on localhost:44818
+    - in terminal two, run =./process=, which begins to monitor the PLC on localhost:44818
+  
+    - in terminal one, type in serial numbers (or hit return); terminal two should detect and
+      process them
+  
+  Once satisfied, target your actual Controller at IP address 192.168.1.2:
+  : $ ./process --address 192.168.1.2
+  
+  NOTE: Assumes the data types of the ...Bool flags are SINT, and the SerialNo is DINT!
