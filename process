@@ -35,8 +35,8 @@ def SetPLCTagVal( conn, tag, val, tag_type="INT", timeout=None ):
 
 
 def GetPLCTagVal( conn, *tags, **kwds ):
-    """Get 1 or more tags, and yield the results (will always be a list of values).  Since the values
-    for all the specified tag(s) come back as a sequence, you must assign the result to a tuple:
+    """Get 1 or more tags, and yield the results (each will be a list of values).  Since the values for
+    all the specified tag(s) come back as a sequence, you must assign the result to a tuple:
 
         a,	= GetPLCTagVal( conn, "Tag_A", timeout=1.0 )
         a,b,c	= GetPLCTagVal( conn, "Tag_A", "Tag_B", "Tag_C", timeout=1.0 )
@@ -70,7 +70,7 @@ def process( host, timeout=None ):
                 if trigger is not None:
                     time.sleep( .02 )
                 trigger,	= GetPLCTagVal( conn, 'TriggerBool', timeout=timeout )
-            print("At last, I've been triggered: %s!", trigger[0] )
+            print( "At last, I've been triggered: %s!" % ( trigger ))
 
             # PLC Sees bit going off, Knows process is started
             SetPLCTagVal( conn, 'TriggerBool', [0], tag_type='SINT', timeout=timeout )
@@ -78,12 +78,12 @@ def process( host, timeout=None ):
 
             # sleep(10)#Processing done here
             delay		= random.randint( 1, 10 )
-            print( 'Now processing unit No %s (for %ss)...' % ( serial[0], delay ))
+            print( "Now processing unit No %s (for %ss)..." % ( serial[0], delay ))
             time.sleep( delay )
 
             # PLC Sees bit going ON, Knows processing is finished
             SetPLCTagVal( conn, 'DoneBool', [1], tag_type='SINT', timeout=timeout )
-            print("Processing unit No %s complete" % ( serial ))
+            print( "Processing unit No %s complete" % ( serial ))
 
 if __name__ == "__main__":
     
